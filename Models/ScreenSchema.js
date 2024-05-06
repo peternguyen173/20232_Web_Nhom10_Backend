@@ -10,7 +10,7 @@ const screenSchema = new mongoose.Schema({
         required: true
     },
     screenType: {
-        type: String, // Example: "Standard", "IMAX", "VIP", etc.
+        type: String,
         required: true
     },
     movieSchedules: [
@@ -22,7 +22,6 @@ const screenSchema = new mongoose.Schema({
             },
             showTime: String,
             notAvailableSeats: [{
-                // { row: 'D', col: 0, seat_id: '10', price: 300 }
                 rowname: String,
                 seat_id: String,
 
