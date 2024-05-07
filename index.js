@@ -6,6 +6,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const PORT = 8000;
 
+
 app.use(bodyparser.json());
 const allowedOrigins = ['https://localhost:3000', 'https://localhost:3001']
 app.use(
