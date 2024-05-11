@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const User = require('../Models/UserSchema');
@@ -5,6 +6,64 @@ const errorHandler = require('../Middlewares/errorMiddleware');
 const authTokenHandler = require('../Middlewares/checkAuthToken');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
+// const Knock = require('@knocklabs/client');
+const passport = require('passport');
+
+
+router.get(
+    '/google/callback', 
+    passport.authenticate('google',{
+        successRedirect: "http://localhost:3000",
+        failureRedirect: "http://localhost:3000",
+    })
+)
+
+router.get("/logout",(req,res) =>{
+    req.logOut();
+    res.redirect("http://localhost:3000")
+})
+
+router.get('/google', 
+passport.authenticate('google', { scope : ['profile', 'email'] })
+
+);
+
+router.get(
+    "/login/success" ,(req,res) => {
+        if(req.user){
+            res.status(200).json({
+                error: false,
+                message: "Sucessfully login with google",
+                user: req.user
+            })
+        }else{
+            res.status(403).json({
+                error: true,
+                message: "Not Authorized"
+            })
+        }
+        
+    }
+)
+
+router.get(
+    "/login/failed" ,(req,res) => {
+        res.status(401).json({
+            error: true,
+            message: "Login failure with google"
+        })
+    }
+)
+
+////////////////////////
+
+router.get('/test', async (req, res) => {
+    res.json({
+        message: "Auth api is working"
+    })
+})
+
 
 
 function createResponse(ok, message, data) {
@@ -43,6 +102,22 @@ router.post('/register', async (req, res, next) => {
     }
 })
 
+// change user city
+/* router.post('/changeCity', authTokenHandler, async (req, res, next) => {
+    const { city } = req.body;
+    const user = await User.findOne({ _id: req.userId });
+
+    if (!user) {
+        return res.status(400).json(createResponse(false, 'Invalid credentials'));
+    }
+    else {
+        user.city = city;
+        await user.save();
+        return res.status(200).json(createResponse(true, 'City changed successfully'));
+    }
+})
+*/
+// router.post('/sendotp', async (req, res) => {})
 router.post('/login', async (req, res, next) => {
     console.log(req.body);
     const { email, password } = req.body;
@@ -67,6 +142,9 @@ router.post('/login', async (req, res, next) => {
         authToken,
         refreshToken
     }));
+
+
+    
 })
 
 router.get('/checklogin', authTokenHandler, async (req, res) => {
@@ -81,12 +159,59 @@ router.get('/checklogin', authTokenHandler, async (req, res) => {
 router.get('/logout', async (req, res) => {
     res.clearCookie('authToken');
     res.clearCookie('refreshToken');
+    req.logOut();
     res.json({
         ok: true,
         message: 'User logged out successfully'
     })
 })
 
+router.get('/getuser', authTokenHandler, async (req, res) => {
+    const user = await User.findOne({ _id: req.userId });
+
+    if (!user) {
+        return res.status(400).json(createResponse(false, 'Invalid credentials'));
+    }
+    else {
+        return res.status(200).json(createResponse(true, 'User found', user));
+    }
+})
+
+router.post('/updateuser', authTokenHandler, async (req, res, next) => {
+    try {
+        const { name, email, password, phonenumber, dob, gender } = req.body;
+        const updatedFields = {};
+
+        if (name) {
+            updatedFields.name = name;
+        }
+        if (email) {
+            updatedFields.email = email;
+        }
+        if (password) {
+            updatedFields.password = password;
+        }
+        if (phonenumber) {
+            updatedFields.phonenumber = phonenumber;
+        }
+        if (dob) {
+            updatedFields.dob = dob;
+        }
+        if (gender) {
+            updatedFields.gender = gender;
+        }
+
+        const user = await User.findOneAndUpdate({ _id: req.userId }, { $set: updatedFields }, { new: true });
+
+        if (!user) {
+            return res.status(400).json(createResponse(false, 'Invalid credentials'));
+        }
+
+        res.status(200).json(createResponse(true, 'User updated successfully', user));
+    } catch (err) {
+        next(err);
+    }
+});
 
 router.use(errorHandler)
 
