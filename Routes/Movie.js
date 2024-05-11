@@ -283,6 +283,61 @@ router.delete('/deletemovie/:id', async (req, res, next) => {
     }
 });
 
+router.post('/createpromotion', adminTokenHandler, async (req, res, next) => {
+    try {
+        const { title, type, description, discount, startDate, expiryDate } = req.body;
+
+        const newPromotion = new Promotion({ title, type, description, discount, startDate, expiryDate });
+        await newPromotion.save();
+
+        res.status(201).json({
+            ok: true,
+            message: "Promotion created successfully"
+        });
+    } catch (err) {
+        next(err); // Chuyển các lỗi tới middleware xử lý lỗi
+    }
+});
+
+router.get('/getpromotions', async (req, res, next) => {
+    try {
+        const promotions = await Promotion.find();
+
+        if (!promotions || promotions.length === 0) {
+            return res.status(404).json(createResponse(false, 'No promotions found', null));
+        }
+
+        res.status(200).json(createResponse(true, 'Promotions retrieved successfully', promotions));
+    } catch (err) {
+        next(err); // Pass any errors to the error handling middleware
+    }
+});
+
+router.delete('/deletepromotion/:promotionId', adminTokenHandler, async (req, res, next) => {
+    try {
+        const promotionId = req.params.promotionId;
+
+        // Tìm và xóa khuyến mãi dựa trên ID
+        const deletedPromotion = await Promotion.findByIdAndDelete(promotionId);
+
+        if (!deletedPromotion) {
+            return res.status(404).json({
+                ok: false,
+                message: "Promotion not found"
+            });
+        }
+
+        res.status(200).json({
+            ok: true,
+            message: "Promotion deleted successfully"
+        });
+    } catch (err) {
+        next(err); // Chuyển mọi lỗi đến middleware xử lý lỗi
+    }
+});
+
+
+
 router.get('/test',async(req,res) => {
     res.json({
         message: "Movie api is working"
