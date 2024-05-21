@@ -186,6 +186,21 @@ router.get('/screensbymovieschedule/undefined/:date/:movieid', async (req, res, 
     }
 });
 
+router.get('/movies', async (req, res, next) => {
+    try {
+        const movies = await Movie.find();
+
+        // Return the list of movies as JSON response
+        res.status(200).json({
+            ok: true,
+            data: movies,
+            message: 'Movies retrieved successfully'
+        });
+    }
+    catch (err) {
+        next(err); // Pass any errors to the error handling middleware
+    }
+})
 router.get('/movies',adminTokenHandler,async(req,res,next) => {
     try {
         const movies = await Movie.find();
