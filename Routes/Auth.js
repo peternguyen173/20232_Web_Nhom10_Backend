@@ -19,10 +19,7 @@ router.get(
     })
 )
 
-router.get("/logout",(req,res) =>{
-    req.logOut();
-    res.redirect("http://localhost:3000")
-})
+
 
 router.get('/google', 
 passport.authenticate('google', { scope : ['profile', 'email'] })
@@ -159,23 +156,26 @@ router.get('/checklogin', authTokenHandler, async (req, res) => {
 router.get('/logout', async (req, res) => {
     res.clearCookie('authToken');
     res.clearCookie('refreshToken');
-    req.logOut();
     res.json({
         ok: true,
         message: 'User logged out successfully'
     })
 })
 
+
+
 router.get('/getuser', authTokenHandler, async (req, res) => {
     const user = await User.findOne({ _id: req.userId });
 
     if (!user) {
         return res.status(400).json(createResponse(false, 'Invalid credentials'));
+    } else {
+        return res.status(200).json(createResponse(true, 'User found', {
+            ...user.toObject(), // Chuyển đổi user thành object để thêm thuộc tính
+            userId: user._id     // Thêm userId vào response
+        }));
     }
-    else {
-        return res.status(200).json(createResponse(true, 'User found', user));
-    }
-})
+});
 
 router.post('/updateuser', authTokenHandler, async (req, res, next) => {
     try {
