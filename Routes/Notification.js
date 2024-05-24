@@ -5,6 +5,27 @@ const router = express.Router();
 const Notification = require('../Models/NotificationSchema');
 const authTokenHandler = require('../Middlewares/checkAuthToken');
 
+router.get('/getUserRating/:movieId', authTokenHandler, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const movieId = req.params.movieId;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const userRating = await Rating.findOne({ userId, movieId });
+
+    if (!userRating) {
+      return res.status(404).json({ message: 'Rating not found' });
+    }
+
+    res.json({ data: userRating });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
 // Get notifications for a user
 router.get('/getnoti', authTokenHandler, async (req, res) => {
   try {

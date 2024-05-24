@@ -737,7 +737,34 @@ router.get('/avgRating/:movieId', async (req, res) => {
     }
 });
 
-
+router.get('/checkUserRating/:movieId', authTokenHandler, async (req, res) => {
+    try {
+      const userId = req.userId;
+      const movieId = req.params.movieId;
+  
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+  
+      const rating = await Rating.findOne({ movieId });
+  
+      if (!rating) {
+        return res.status(404).json({ message: 'Rating not found' });
+      }
+  
+      const userRatingObj = rating.ratings.find(item => item.userId === userId);
+      if (!userRatingObj) {
+        return res.status(404).json({ message: 'User rating not found for this movie' });
+      }
+  
+      const userRating = userRatingObj.rating;
+  
+      res.json({ data: userRating });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  });
 
 router.use(errorHandler)
 

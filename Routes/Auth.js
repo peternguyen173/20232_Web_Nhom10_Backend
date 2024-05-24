@@ -19,10 +19,7 @@ router.get(
     })
 )
 
-router.get("/logout",(req,res) =>{
-    req.logOut();
-    res.redirect("http://localhost:3000")
-})
+
 
 router.get('/google', 
 passport.authenticate('google', { scope : ['profile', 'email'] })
@@ -159,7 +156,6 @@ router.get('/checklogin', authTokenHandler, async (req, res) => {
 router.get('/logout', async (req, res) => {
     res.clearCookie('authToken');
     res.clearCookie('refreshToken');
-    req.logOut();
     res.json({
         ok: true,
         message: 'User logged out successfully'
