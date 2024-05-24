@@ -166,16 +166,20 @@ router.get('/logout', async (req, res) => {
     })
 })
 
+
+
 router.get('/getuser', authTokenHandler, async (req, res) => {
     const user = await User.findOne({ _id: req.userId });
 
     if (!user) {
         return res.status(400).json(createResponse(false, 'Invalid credentials'));
+    } else {
+        return res.status(200).json(createResponse(true, 'User found', {
+            ...user.toObject(), // Chuyển đổi user thành object để thêm thuộc tính
+            userId: user._id     // Thêm userId vào response
+        }));
     }
-    else {
-        return res.status(200).json(createResponse(true, 'User found', user));
-    }
-})
+});
 
 router.post('/updateuser', authTokenHandler, async (req, res, next) => {
     try {

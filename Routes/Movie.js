@@ -1,11 +1,23 @@
 const express = require('express');
-const router = express.Router();
+const mongoose = require('mongoose');
+const socketIO = require('socket.io');
 
+const router = express.Router();
+const io = socketIO();
+
+const User = require('../Models/UserSchema')
 const Movie = require('../Models/MovieSchema')
+const Booking = require('../Models/BookingSchema')
 const Screen = require('../Models/ScreenSchema')
+const Promotion = require('../Models/PromotionSchema')
+const Rating = require('../Models/RatingSchema')
+const Notification = require('../Models/NotificationSchema'); // Model Notification
+
+
 const errorHandler = require('../Middlewares/errorMiddleware');
 const authTokenHandler = require('../Middlewares/checkAuthToken');
 const adminTokenHandler = require('../Middlewares/checkAdminToken');
+
 
 function createResponse(ok, message, data) {
     return {
@@ -15,51 +27,27 @@ function createResponse(ok, message, data) {
     };
 }
 
-router.post('/createmovie',adminTokenHandler,async(req,res,next) => {
+router.get('/test', async (req, res) => {
+    res.json({
+        message: "Movie api is working"
+    })
+})
+
+
+// admin access
+router.post('/createmovie', adminTokenHandler, async (req, res, next) => {
     try {
-        const {title, description, portraitImgUrl, landscapeImgUrl, language, director, cast, releasedate, rated, genre, duration} = req.body;
-        const newMovie = new Movie({title, description, portraitImgUrl, landscapeImgUrl, language, director, cast, releasedate, rated, genre, duration})
+        const { title, description, portraitImgUrl, landscapeImgUrl, language, director, cast, releasedate, rated, genre, duration } = req.body;
+
+        const newMovie = new Movie({ title, description, portraitImgUrl, landscapeImgUrl, language, director, cast, releasedate, rated, genre, duration })
         await newMovie.save();
         res.status(201).json({
             ok: true,
             message: "Movie added successfully"
-        })
-    }
-    catch(err){
-        next(err);
-    }
-})
-router.post('/addcelebtomovie',adminTokenHandler,async(req,res,next) => {
-    try {
-        const {movieId,celebType,celebName,celebRole,celebImage} = req.body
-        const movie = await Movie.findById(movieId);
-        if(!movie) {
-            return res.status(404).json({
-                ok: false,
-                message: "Movie not found"
-            })
-        }
-
-        const newCeleb = {
-            celebType,
-            celebName,
-            celebRole,
-            celebImage
-        };
-        if(celebType === "cast") {
-            movie.cast.push(newCeleb);
-        } else {
-            movie.crew.push(newCeleb);
-        }
-        await movie.save();
-
-        res.status(201).json({
-            ok: true,
-            message: "Celeb added successfully"
         });
     }
-    catch(err){
-        next(err);
+    catch (err) {
+        next(err); // Pass any errors to the error handling middleware
     }
 })
 
@@ -87,6 +75,29 @@ router.post('/createscreen', adminTokenHandler, async (req, res, next) => {
     }
 })
 
+router.post('/updatescreen/:screenid', adminTokenHandler, async (req, res, next) => {
+    try {
+        const { name, rows, screenType } = req.body;
+        const newScreen = new Screen({
+            name,
+            rows,
+            screenType,
+            movieSchedules: []
+        });
+
+        await newScreen.save();
+
+
+        res.status(201).json({
+            ok: true,
+            message: "Screen added successfully"
+        });
+    }
+    catch (err) {
+        console.log(err);
+        next(err); // Pass any errors to the error handling middleware
+    }
+})
 
 router.put('/updatescreen/:screenid', adminTokenHandler, async (req, res, next) => {
     try {
@@ -116,6 +127,254 @@ router.put('/updatescreen/:screenid', adminTokenHandler, async (req, res, next) 
     } catch (err) {
         console.error(err);
         next(err); // Pass any errors to the error handling middleware
+    }
+});
+
+router.post('/addmoviescheduletoscreen', adminTokenHandler, async (req, res, next) => {
+    console.log("Inside addmoviescheduletoscreen")
+    try {
+        const { screenId, movieId, showTime, showDate } = req.body;
+        const screen = await Screen.findById(screenId);
+        if (!screen) {
+            return res.status(404).json({
+                ok: false,
+                message: "Screen not found"
+            });
+        }
+
+        const movie = await Movie.findById(movieId);
+        if (!movie) {
+            return res.status(404).json({
+                ok: false,
+                message: "Movie not found"
+            });
+        }
+
+        screen.movieSchedules.push({
+            movieId,
+            showTime,
+            notavailableseats: [],
+            showDate
+        });
+
+        await screen.save();
+
+        res.status(201).json({
+            ok: true,
+            message: "Movie schedule added successfully"
+        });
+
+    }
+    catch (err) {
+        next(err); // Pass any errors to the error handling middleware
+    }
+})
+
+
+// user access
+router.post('/bookticket', authTokenHandler, async (req, res, next) => {
+    try {
+        const { showTime, showDate, movieId, screenId, seats, totalPrice, paymentId, paymentType, cornquantity, waterquantity } = req.body;
+        console.log(req.body);
+
+        // You can create a function to verify payment id
+
+        const screen = await Screen.findById(screenId);
+
+        if (!screen) {
+            return res.status(404).json({
+                ok: false,
+                message: "Theatre not found"
+            });
+        }
+
+
+
+        const movieSchedule = screen.movieSchedules.find(schedule => {
+            console.log(schedule);
+            let showDate1 = new Date(schedule.showDate);
+            let showDate2 = new Date(showDate);
+            if (showDate1.getUTCDay() === showDate2.getUTCDay() &&
+                showDate1.getUTCMonth() === showDate2.getUTCMonth() &&
+                showDate1.getUTCFullYear() === showDate2.getUTCFullYear() &&
+                schedule.showTime === showTime &&
+                schedule.movieId == movieId) {
+                return true;
+            }
+            return false;
+        });
+
+        if (!movieSchedule) {
+            return res.status(404).json({
+                ok: false,
+                message: "Movie schedule not found"
+            });
+        }
+
+        const user = await User.findById(req.userId);
+        const movie1 = await Movie.findById(movieId);
+        const screen1 = await Screen.findById(screenId);
+        console.log(movie1);
+
+        if (!movie1) {
+            return res.status(404).json({
+                ok: false,
+                message: "User not found"
+            });
+        }
+        if (!movie1) {
+            return res.status(404).json({
+                ok: false,
+                message: "User not found"
+            });
+        }
+        if (!user) {
+            return res.status(404).json({
+                ok: false,
+                message: "User not found"
+            });
+        }
+        console.log('before newBooking done');
+        const newBooking = new Booking({ userId: req.userId, showTime, showDate, moviename: movie1.title, bookDate: new Date(), screenname: screen1.name, seats, totalPrice, paymentId, paymentType, cornquantity, waterquantity })
+        await newBooking.save();
+        console.log('newBooking done');
+
+
+
+        movieSchedule.notAvailableSeats.push(...seats);
+        await screen.save();
+        console.log('screen saved');
+
+        user.bookings.push(newBooking._id);
+        await user.save();
+        console.log('user saved');
+        
+        const newNotification = new Notification({
+            userId: req.userId,
+            message: `Đặt vé "${movie1.title}" thành công! Mã vé: ${newBooking.id}`, // Sử dụng newBooking.id để lấy mã vé
+            timestamp: new Date(),
+            isRead: false
+          });
+      
+          // Lưu thông báo vào cơ sở dữ liệu
+          await newNotification.save();
+      
+          // Gửi thông báo qua Socket.IO
+          req.io.emit('bookingConfirmed', { userId: req.userId, message: `Đặt vé "${movie1.title}" thành công! Mã vé: ${newBooking.id}` });
+
+          res.status(201).json({
+            ok: true,
+            message: "Booking successful",
+            bookingId: newBooking.id // Trả về mã vé cho frontend
+          });
+      
+    }
+    
+    catch (err) {
+        next(err); // Pass any errors to the error handling middleware
+    }
+    
+})
+
+
+router.get('/movies', async (req, res, next) => {
+    try {
+        const movies = await Movie.find();
+
+        // Return the list of movies as JSON response
+        res.status(200).json({
+            ok: true,
+            data: movies,
+            message: 'Movies retrieved successfully'
+        });
+    }
+    catch (err) {
+        next(err); // Pass any errors to the error handling middleware
+    }
+})
+router.get('/movies/:id', async (req, res, next) => {
+    try {
+        const movieId = req.params.id;
+        const movie = await Movie.findById(movieId);
+        if (!movie) {
+            // If the movie is not found, return a 404 Not Found response
+            return res.status(404).json({
+                ok: false,
+                message: 'Movie not found'
+            });
+        }
+
+        res.status(200).json({
+            ok: true,
+            data: movie,
+            message: 'Movie retrieved successfully'
+        });
+    }
+    catch (err) {
+        next(err); // Pass any errors to the error handling middleware
+    }
+})
+
+router.put('/updatemovie/:id', adminTokenHandler, async (req, res, next) => {
+    try {
+        const movieId = req.params.id;
+        const { title, description, portraitImgUrl, landscapeImgUrl, language, director, cast, releasedate, rated, genre, duration } = req.body;
+
+        // Tìm phim cần cập nhật
+        const movie = await Movie.findById(movieId);
+
+        if (!movie) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Movie not found',
+            });
+        }
+
+        // Cập nhật thông tin phim
+        movie.title = title;
+        movie.description = description;
+        movie.portraitImgUrl = portraitImgUrl;
+        movie.landscapeImgUrl = landscapeImgUrl;
+        movie.language = language;
+        movie.director = director;
+        movie.cast = cast;
+        movie.releasedate = releasedate;
+        movie.rated = rated;
+        movie.genre = genre;
+        movie.duration = duration;
+
+        await movie.save();
+
+        res.status(200).json({
+            ok: true,
+            message: 'Movie updated successfully',
+            data: movie,
+        });
+    } catch (err) {
+        next(err); // Chuyển các lỗi tới middleware xử lý lỗi
+    }
+});
+
+router.delete('/deletemovie/:id', async (req, res, next) => {
+    try {
+        const movieId = req.params.id;
+
+        // Tìm phim dựa trên ID và xóa nó
+        const deletedMovie = await Movie.findByIdAndDelete(movieId);
+
+        if (!deletedMovie) {
+            return res.status(404).json({
+                ok: false,
+                message: "Movie not found"
+            });
+        }
+
+        res.status(200).json({
+            ok: true,
+            message: "Movie deleted successfully"
+        });
+    } catch (err) {
+        next(err); // Chuyển mọi lỗi đến middleware xử lý lỗi
     }
 });
 
@@ -186,120 +445,146 @@ router.get('/screensbymovieschedule/undefined/:date/:movieid', async (req, res, 
     }
 });
 
-router.get('/movies', async (req, res, next) => {
-    try {
-        const movies = await Movie.find();
 
-        // Return the list of movies as JSON response
-        res.status(200).json({
-            ok: true,
-            data: movies,
-            message: 'Movies retrieved successfully'
-        });
+
+router.get('/schedulebymovie/:screenid/:date/:showtime/:movieid', async (req, res, next) => {
+    const screenId = req.params.screenid;
+    const date = req.params.date;
+    const movieId = req.params.movieid;
+    const showtime = req.params.showtime;
+
+    const screen = await Screen.findById(screenId);
+
+    if (!screen) {
+        return res.status(404).json(createResponse(false, 'Screen not found', null));
     }
-    catch (err) {
+
+    const movieSchedules = screen.movieSchedules.filter(schedule => {
+        let showDate = new Date(schedule.showDate);
+        let bodyDate = new Date(date);
+        if (showDate.getUTCDay() == bodyDate.getUTCDay() &&
+            showDate.getUTCMonth() == bodyDate.getUTCMonth() &&
+            showDate.getUTCFullYear() == bodyDate.getUTCFullYear() &&
+            schedule.movieId == movieId
+            && schedule.showTime === showtime) {
+            return true;
+        }
+        return false;
+    });
+    console.log(movieSchedules)
+
+    if (!movieSchedules) {
+        return res.status(404).json(createResponse(false, 'Movie schedule not found', null));
+    }
+
+    res.status(200).json(createResponse(true, 'Movie schedule retrieved successfully', {
+        screen,
+        movieSchedulesforDate: movieSchedules,
+        date
+    }));
+
+});
+
+router.get('/schedules/:screenId', async (req, res) => {
+    try {
+        const { screenId } = req.params;
+
+        const screen = await Screen.findById(screenId);
+        if (!screen) {
+            return res.status(404).json({ message: 'Screen not found' });
+        }
+
+        const schedules = screen.movieSchedules.map(schedule => ({
+            _id: schedule._id,
+            movieTitle: schedule.movieTitle, // Thay bằng tên trường thực tế của phim
+            screenName: screen.name, // Tên màn hình
+            showDate: schedule.showDate, // Thay bằng tên trường thực tế của ngày chiếu
+            showTime: schedule.showTime, // Thay bằng tên trường thực tế của giờ chiếu
+        }));
+
+        return res.status(200).json({ schedules });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error fetching schedules', error: error.message });
+    }
+});
+
+router.delete('/deleteschedule/:scheduleId', async (req, res) => {
+    try {
+        const { scheduleId } = req.params;
+
+        const screen = await Screen.findOneAndUpdate(
+            { 'movieSchedules._id': scheduleId },
+            { $pull: { movieSchedules: { _id: scheduleId } } },
+            { new: true }
+        );
+
+        if (!screen) {
+            return res.status(404).json({ ok: false, message: 'Schedule not found' });
+        }
+
+        res.status(200).json({ ok: true, message: 'Schedule deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ ok: false, message: 'Server error' });
+    }
+});
+
+
+
+router.delete('/deletescreen/:screenid', async (req, res) => {
+    const { screenid } = req.params;
+
+    try {
+        const deletedScreen = await Screen.findByIdAndDelete(screenid);
+        if (!deletedScreen) {
+            return res.status(404).json({ message: "Phòng chiếu không tồn tại." });
+        }
+        res.status(200).json({ message: "Xóa phòng chiếu thành công." });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi xảy ra khi xóa phòng chiếu." });
+    }
+
+});
+
+router.get('/getuserbookings', authTokenHandler, async (req, res, next) => {
+    try {
+        const user = await User.findById(req.userId).populate('bookings');
+        if (!user) {
+            return res.status(404).json(createResponse(false, 'User not found', null));
+        }
+
+        let bookings = [];
+        // user.bookings.forEach(async booking => {
+        //     let bookingobj = await Booking.findById(booking._id);
+        //     bookings.push(bookingobj);
+        // })
+
+        for (let i = 0; i < user.bookings.length; i++) {
+            let bookingobj = await Booking.findById(user.bookings[i]._id);
+            bookings.push(bookingobj);
+        }
+
+        res.status(200).json(createResponse(true, 'User bookings retrieved successfully', bookings));
+        // res.status(200).json(createResponse(true, 'User bookings retrieved successfully', user.bookings));
+    } catch (err) {
         next(err); // Pass any errors to the error handling middleware
     }
 })
-router.get('/movies',adminTokenHandler,async(req,res,next) => {
-    try {
-        const movies = await Movie.find();
 
-        res.status(200).json({
-            ok: true,
-            data: movies,
-            message: "Movies retrieved successfully"
-        });
-    }
-    catch(err){
-        next(err);
-    }
-})
-
-router.get('/movies/:id',adminTokenHandler,async(req,res,next) => {
+router.get('/getuserbookings/:id', authTokenHandler, async (req, res, next) => {
     try {
-        const movieId = req.params.id;
-        const movie = await Movie.findById(movieId);
-        if(!movie) {
-            return res.status(404).json({
-                ok: false,
-                message: "Movie not found"
-            });
+        const bookingId = req.params.id;
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json(createResponse(false, 'Booking not found', null));
         }
 
-        res.status(200).json({
-            ok: true,
-            data: movie,
-            message: "Movie retrieved successfully"
-        });
-    }
-    catch(err){
-        next(err);
-    }
-})
-
-router.put('updatemovie/:id',adminTokenHandler,async(req,res,next) => {
-    try{
-        const movieId = req.params.id;
-        const { title, description, portraitImgUrl, landscapeImgUrl, language, director, cast, releasedate, rated, genre, duration } = req.body;
-
-        // Tìm phim cần cập nhật
-        const movie = await Movie.findById(movieId);
-
-        if (!movie) {
-            return res.status(404).json({
-                ok: false,
-                message: 'Movie not found',
-            });
-        }
-
-        // Cập nhật thông tin phim
-        movie.title = title;
-        movie.description = description;
-        movie.portraitImgUrl = portraitImgUrl;
-        movie.landscapeImgUrl = landscapeImgUrl;
-        movie.language = language;
-        movie.director = director;
-        movie.cast = cast;
-        movie.releasedate = releasedate;
-        movie.rated = rated;
-        movie.genre = genre;
-        movie.duration = duration;
-
-        await movie.save();
-
-        res.status(200).json({
-            ok: true,
-            message: 'Movie updated successfully',
-            data: movie,
-        });
+        res.status(200).json(createResponse(true, 'Booking retrieved successfully', booking));
     } catch (err) {
-        next(err); // Chuyển các lỗi tới middleware xử lý lỗi
+        next(err); // Pass any errors to the error handling middleware
     }
 })
-
-router.delete('/deletemovie/:id', async (req, res, next) => {
-    try {
-        const movieId = req.params.id;
-
-        // Tìm phim dựa trên ID và xóa nó
-        const deletedMovie = await Movie.findByIdAndDelete(movieId);
-
-        if (!deletedMovie) {
-            return res.status(404).json({
-                ok: false,
-                message: "Movie not found"
-            });
-        }
-
-        res.status(200).json({
-            ok: true,
-            message: "Movie deleted successfully"
-        });
-    } catch (err) {
-        next(err); // Chuyển mọi lỗi đến middleware xử lý lỗi
-    }
-});
 
 router.post('/createpromotion', adminTokenHandler, async (req, res, next) => {
     try {
@@ -355,116 +640,105 @@ router.delete('/deletepromotion/:promotionId', adminTokenHandler, async (req, re
 });
 
 
+router.post('/rating', async (req, res) => {
+    const { movieId, userId, rating } = req.body;
 
-router.get('/test',async(req,res) => {
-    res.json({
-        message: "Movie api is working"
-    })
-})
+    try {
+        // Kiểm tra xem userId và movieId có tồn tại trong cơ sở dữ liệu hay không
+        const userExists = await User.exists({ _id: userId });
+        const movieExists = await Movie.exists({ _id: movieId });
 
-// Thanh toan VNPAY
+        if ( !movieExists) {
+            return res.status(404).json({ success: false, message: 'Người dùng hoặc bộ phim không tồn tại.' });
+        }
 
-router.post('/create_payment_url', function (req, res, next) {
-    var ipAddr = req.headers['x-forwarded-for'] ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        req.connection.socket.remoteAddress;
+        // Tìm bản ghi Rating có movieId tương ứng
+        const ratingRecord = await Rating.findOne({ movieId });
 
-    var config = require('config');
-    var dateFormat = require('dateformat');
+        if (!ratingRecord) {
+            // Nếu không tìm thấy bản ghi, tạo mới và thêm đánh giá
+            const newRating = new Rating({
+                movieId: movieId,
+                ratings: [{ userId, rating }]
+            });
+            await newRating.save();
+        } else {
+            // Nếu tìm thấy bản ghi, kiểm tra xem user đã đánh giá chưa
+            const userRatingIndex = ratingRecord.ratings.findIndex(item => item.userId === userId);
 
-    
-    var tmnCode = config.get('DPKGLXA7');
-    var secretKey = config.get('Y2AW1HT7LQ61ZZG93KHAUDODE7LAWSU1');
-    var vnpUrl = config.get('https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
-    var returnUrl = config.get('vnp_ReturnUrl');
+            if (userRatingIndex === -1) {
+                // Nếu user chưa đánh giá, thêm mới đánh giá
+                ratingRecord.ratings.push({ userId, rating });
+            } else {
+                // Nếu user đã đánh giá, cập nhật đánh giá của user đó
+                ratingRecord.ratings[userRatingIndex].rating = rating;
+            }
 
-    var date = new Date();
+            await ratingRecord.save();
+        }
 
-    var createDate = dateFormat(date, 'yyyymmddHHmmss');
-    var orderId = dateFormat(date, 'HHmmss');
-    var amount = req.body.amount;
-    var bankCode = req.body.bankCode;
-    
-    var orderInfo = req.body.orderDescription;
-    var orderType = req.body.orderType;
-    var locale = req.body.language;
-    if(locale === null || locale === ''){
-        locale = 'vn';
-    }
-    var currCode = 'VND';
-    var vnp_Params = {};
-    vnp_Params['vnp_Version'] = '2.1.0';
-    vnp_Params['vnp_Command'] = 'pay';
-    vnp_Params['vnp_TmnCode'] = tmnCode;
-    // vnp_Params['vnp_Merchant'] = ''
-    vnp_Params['vnp_Locale'] = locale;
-    vnp_Params['vnp_CurrCode'] = currCode;
-    vnp_Params['vnp_TxnRef'] = orderId;
-    vnp_Params['vnp_OrderInfo'] = orderInfo;
-    vnp_Params['vnp_OrderType'] = orderType;
-    vnp_Params['vnp_Amount'] = amount * 100;
-    vnp_Params['vnp_ReturnUrl'] = returnUrl;
-    vnp_Params['vnp_IpAddr'] = ipAddr;
-    vnp_Params['vnp_CreateDate'] = createDate;
-    if(bankCode !== null && bankCode !== ''){
-        vnp_Params['vnp_BankCode'] = bankCode;
-    }
-
-    vnp_Params = sortObject(vnp_Params);
-
-    var querystring = require('qs');
-    var signData = querystring.stringify(vnp_Params, { encode: false });
-    var crypto = require("crypto");     
-    var hmac = crypto.createHmac("sha512", secretKey);
-    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex"); 
-    vnp_Params['vnp_SecureHash'] = signed;
-    vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
-
-    res.redirect(vnpUrl)
-});
-
- 
-
-// Vui lòng tham khảo thêm tại code demo
-
- 
-router.get('/vnpay_return', function (req, res, next) {
-    var vnp_Params = req.query;
-
-    var secureHash = vnp_Params['vnp_SecureHash'];
-
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
-
-    vnp_Params = sortObject(vnp_Params);
-
-    var config = require('config');
-    var tmnCode = config.get('vnp_TmnCode');
-    var secretKey = config.get('vnp_HashSecret');
-
-    var querystring = require('qs');
-    var signData = querystring.stringify(vnp_Params, { encode: false });
-    var crypto = require("crypto");     
-    var hmac = crypto.createHmac("sha512", secretKey);
-    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");     
-
-    if(secureHash === signed){
-        //Kiem tra xem du lieu trong db co hop le hay khong va thong bao ket qua
-
-        res.render('success', {code: vnp_Params['vnp_ResponseCode']})
-    } else{
-        res.render('success', {code: '97'})
+        // Trả về phản hồi thành công
+        res.status(201).json({ success: true, message: 'Đánh giá của bạn đã được ghi nhận.' });
+    } catch (error) {
+        // Xử lý lỗi nếu có
+        console.error('Đánh giá không thành công:', error);
+        res.status(500).json({ success: false, message: 'Đã xảy ra lỗi, vui lòng thử lại.' });
     }
 });
 
+router.get('/checkUserRating/:movieId/:userId', async (req, res) => {
+    try {
+        const { movieId, userId } = req.params;
+
+        // Tìm xem bộ phim có tồn tại trong bảng Rating không
+        const rating = await Rating.findOne({ movieId });
+
+        if (!rating) {
+            // Bộ phim không có bất kỳ đánh giá nào
+            return res.status(200).json({ hasRated: false });
+        }
+
+        // Kiểm tra xem userId đã đánh giá bộ phim không
+        const userRating = rating.ratings.find(item => item.userId === userId);
+
+        if (userRating) {
+            // Người dùng đã đánh giá bộ phim, trả về cả rating
+            return res.status(200).json({ hasRated: true, rating: userRating.rating });
+        } else {
+            // Người dùng chưa đánh giá bộ phim
+            return res.status(200).json({ hasRated: false });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get('/avgRating/:movieId', async (req, res) => {
+    try {
+        const { movieId } = req.params;
+
+        // Tìm xem bộ phim có tồn tại trong bảng Rating không
+        const rating = await Rating.findOne({ movieId });
+
+        if (!rating || !rating.ratings || rating.ratings.length === 0) {
+            // Bộ phim không có bất kỳ đánh giá nào
+            return res.status(200).json({ avgRating: 0, numberOfRatings: 0 });
+        }
+
+        // Tính trung bình của tất cả các đánh giá
+        const ratings = rating.ratings.map(item => item.rating);
+        const avgRating = ratings.reduce((total, rating) => total + rating, 0) / ratings.length;
+
+        return res.status(200).json({ avgRating, numberOfRatings: ratings.length });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
 
 
 router.use(errorHandler)
 
 module.exports = router;
-
-
-
-
