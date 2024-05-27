@@ -84,69 +84,6 @@ router.get('/checklogin', adminTokenHandler, async (req, res) => {
     })
 })
 
-
-router.post('/updateuserbyid/:userid', adminTokenHandler, async (req, res, next) => {
-    try {
-        const { name, email, password, phonenumber, dob, gender } = req.body;
-        const updatedFields = {};
-        const userid = req.params.userid
-        if (name) {
-            updatedFields.name = name;
-        }
-        if (email) {
-            updatedFields.email = email;
-        }
-        if (password) {
-            updatedFields.password = password;
-        }
-        if (phonenumber) {
-            updatedFields.phonenumber = phonenumber;
-        }
-        if (dob) {
-            updatedFields.dob = dob;
-        }
-        if (gender) {
-            updatedFields.gender = gender;
-        }
-
-        const user = await User.findOneAndUpdate({ _id: userid }, { $set: updatedFields }, { new: true });
-
-        if (!user) {
-            return res.status(400).json(createResponse(false, 'Invalid credentials'));
-        }
-
-        res.status(200).json(createResponse(true, 'User updated successfully', user));
-    } catch (err) {
-        next(err);
-    }
-});
-
-router.get('/getuserbookingsbyid/:userid', adminTokenHandler, async (req, res, next) => {
-    try {
-        const userid = req.params.userid
-        const user = await User.findById(userid).populate('bookings');
-        if (!user) {
-            return res.status(404).json(createResponse(false, 'User not found', null));
-        }
-
-        let bookings = [];
-        // user.bookings.forEach(async booking => {
-        //     let bookingobj = await Booking.findById(booking._id);
-        //     bookings.push(bookingobj);
-        // })
-
-        for (let i = 0; i < user.bookings.length; i++) {
-            let bookingobj = await Booking.findById(user.bookings[i]._id);
-            bookings.push(bookingobj);
-        }
-
-        res.status(200).json(createResponse(true, 'User bookings retrieved successfully', bookings));
-        // res.status(200).json(createResponse(true, 'User bookings retrieved successfully', user.bookings));
-    } catch (err) {
-        next(err); // Pass any errors to the error handling middleware
-    }
-})
-
 router.get('/logout', async (req, res) => {
     res.clearCookie('adminAuthToken'); // Xóa cookie 'adminAuthToken'
     res.json({
@@ -225,6 +162,67 @@ router.get('/getuserbyid/:userid', async (req, res, next) => {
     }
 });
 
+router.post('/updateuserbyid/:userid', adminTokenHandler, async (req, res, next) => {
+    try {
+        const { name, email, password, phonenumber, dob, gender } = req.body;
+        const updatedFields = {};
+        const userid = req.params.userid
+        if (name) {
+            updatedFields.name = name;
+        }
+        if (email) {
+            updatedFields.email = email;
+        }
+        if (password) {
+            updatedFields.password = password;
+        }
+        if (phonenumber) {
+            updatedFields.phonenumber = phonenumber;
+        }
+        if (dob) {
+            updatedFields.dob = dob;
+        }
+        if (gender) {
+            updatedFields.gender = gender;
+        }
+
+        const user = await User.findOneAndUpdate({ _id: userid }, { $set: updatedFields }, { new: true });
+
+        if (!user) {
+            return res.status(400).json(createResponse(false, 'Invalid credentials'));
+        }
+
+        res.status(200).json(createResponse(true, 'User updated successfully', user));
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.get('/getuserbookingsbyid/:userid', adminTokenHandler, async (req, res, next) => {
+    try {
+        const userid = req.params.userid
+        const user = await User.findById(userid).populate('bookings');
+        if (!user) {
+            return res.status(404).json(createResponse(false, 'User not found', null));
+        }
+
+        let bookings = [];
+        // user.bookings.forEach(async booking => {
+        //     let bookingobj = await Booking.findById(booking._id);
+        //     bookings.push(bookingobj);
+        // })
+
+        for (let i = 0; i < user.bookings.length; i++) {
+            let bookingobj = await Booking.findById(user.bookings[i]._id);
+            bookings.push(bookingobj);
+        }
+
+        res.status(200).json(createResponse(true, 'User bookings retrieved successfully', bookings));
+        // res.status(200).json(createResponse(true, 'User bookings retrieved successfully', user.bookings));
+    } catch (err) {
+        next(err); // Pass any errors to the error handling middleware
+    }
+})
 
 router.use(errorHandler)
 
