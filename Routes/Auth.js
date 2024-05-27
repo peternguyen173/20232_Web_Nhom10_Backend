@@ -14,23 +14,12 @@ const passport = require('passport');
 router.get(
     '/google/callback', 
     passport.authenticate('google',{
-        successRedirect: "http://localhost:3001",
-        failureRedirect: "http://localhost:3001",
+        successRedirect: "http://localhost:3000",
+        failureRedirect: "http://localhost:3000",
     })
 )
 
-<<<<<<< HEAD
-router.get("/goolelogout",(req,res) =>{
-    req.logOut();
-    // res.redirect("http://localhost:3001")
-    res.json({
-        ok: true,
-        message: 'User logged out successfully'
-    })
-})
-=======
 
->>>>>>> 8889a47f297f77c06cc2fd70e97b4594cdd3f61f
 
 router.get('/google', 
 passport.authenticate('google', { scope : ['profile', 'email'] })
@@ -40,34 +29,21 @@ passport.authenticate('google', { scope : ['profile', 'email'] })
 router.get(
     "/login/success" ,(req,res) => {
         if(req.user){
-            return res.status(200).json(createResponse(true, 'User found',req.user));
-            // res.status(200).json({
-            //     error: false,
-            //     message: "Sucessfully login with google",
-            //     user: req.user
-            // })
+            res.status(200).json({
+                error: false,
+                message: "Sucessfully login with google",
+                user: req.user
+            })
         }else{
-            return res.status(400).json(createResponse(false, 'Invalid credentials'));
-            // res.status(403).json({
-            //     error: true,
-            //     message: "Not Authorized"
-            // })
+            res.status(403).json({
+                error: true,
+                message: "Not Authorized"
+            })
         }
         
     }
 )
-// router.get('/getuser', authTokenHandler, async (req, res) => {
-//     const user = await User.findOne({ _id: req.userId });
-    
-//     if (!user) {
-//         console.log("userunfounded");
-//         return res.status(400).json(createResponse(false, 'Invalid credentials'));
-//     }
-//     else {
-//         console.log("userfounded");
-//         return res.status(200).json(createResponse(true, 'User found', user));
-//     }
-// })
+
 router.get(
     "/login/failed" ,(req,res) => {
         res.status(401).json({
@@ -190,9 +166,8 @@ router.get('/logout', async (req, res) => {
 
 router.get('/getuser', authTokenHandler, async (req, res) => {
     const user = await User.findOne({ _id: req.userId });
-    
+
     if (!user) {
-        console.log("userunfounded");
         return res.status(400).json(createResponse(false, 'Invalid credentials'));
     } else {
         return res.status(200).json(createResponse(true, 'User found', {
@@ -200,15 +175,7 @@ router.get('/getuser', authTokenHandler, async (req, res) => {
             userId: user._id     // Thêm userId vào response
         }));
     }
-<<<<<<< HEAD
-    else {
-        console.log("userfounded");
-        return res.status(200).json(createResponse(true, 'User found', user));
-    }
-})
-=======
 });
->>>>>>> 8889a47f297f77c06cc2fd70e97b4594cdd3f61f
 
 router.post('/updateuser', authTokenHandler, async (req, res, next) => {
     try {
@@ -249,4 +216,3 @@ router.post('/updateuser', authTokenHandler, async (req, res, next) => {
 router.use(errorHandler)
 
 module.exports = router;
-

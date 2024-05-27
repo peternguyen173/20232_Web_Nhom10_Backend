@@ -1,29 +1,18 @@
-<<<<<<< HEAD
-// const Knock = require('@knocklabs/client');
-// import { Knock } from "@knocklabs/client";
-const express = require('express');
-const router = express.Router();
-// C:\Users\Admin\Downloads\Movie\sgpcinema_backend\node_modules\@knocklabs\client\dist\cjs\knock.js
-=======
 const express = require('express');
 const mongoose = require('mongoose');
 const socketIO = require('socket.io');
 
 const router = express.Router();
 const io = socketIO();
->>>>>>> 8889a47f297f77c06cc2fd70e97b4594cdd3f61f
 
 const User = require('../Models/UserSchema')
 const Movie = require('../Models/MovieSchema')
 const Booking = require('../Models/BookingSchema')
 const Screen = require('../Models/ScreenSchema')
 const Promotion = require('../Models/PromotionSchema')
-<<<<<<< HEAD
-=======
 const Rating = require('../Models/RatingSchema')
 const Notification = require('../Models/NotificationSchema'); // Model Notification
 
->>>>>>> 8889a47f297f77c06cc2fd70e97b4594cdd3f61f
 
 const errorHandler = require('../Middlewares/errorMiddleware');
 const authTokenHandler = require('../Middlewares/checkAuthToken');
@@ -56,21 +45,6 @@ router.post('/createmovie', adminTokenHandler, async (req, res, next) => {
             ok: true,
             message: "Movie added successfully"
         });
-<<<<<<< HEAD
-        // const knockClient= new Knock("sk_test_CxObjuVUM9OkqeH58OrwTcHl-15km9uxc6nouPtGJqM");
-        // const otherUsers = await User.find();
-        // await knockClient.notify('movie',{
-        //     actor: "123",
-        //     // recipients: otherUsers.map(user=>user.password),
-        //     recipients: "123456" ,
-        //     data : {
-        //         workout: {
-        //             value:  newMovie.title
-        //         }
-        //     }
-        // });
-=======
->>>>>>> 8889a47f297f77c06cc2fd70e97b4594cdd3f61f
     }
     catch (err) {
         next(err); // Pass any errors to the error handling middleware
@@ -274,17 +248,6 @@ router.post('/bookticket', authTokenHandler, async (req, res, next) => {
         user.bookings.push(newBooking._id);
         await user.save();
         console.log('user saved');
-<<<<<<< HEAD
-        res.status(201).json({
-            ok: true,
-            message: "Booking successful"
-        });
-
-    }
-    catch (err) {
-        next(err); // Pass any errors to the error handling middleware
-    }
-=======
         
         const newNotification = new Notification({
             userId: req.userId,
@@ -311,7 +274,6 @@ router.post('/bookticket', authTokenHandler, async (req, res, next) => {
         next(err); // Pass any errors to the error handling middleware
     }
     
->>>>>>> 8889a47f297f77c06cc2fd70e97b4594cdd3f61f
 })
 
 
@@ -678,9 +640,6 @@ router.delete('/deletepromotion/:promotionId', adminTokenHandler, async (req, re
 });
 
 
-<<<<<<< HEAD
-
-=======
 router.post('/rating', async (req, res) => {
     const { movieId, userId, rating } = req.body;
 
@@ -806,7 +765,6 @@ router.get('/checkUserRating/:movieId', authTokenHandler, async (req, res) => {
       res.status(500).json({ message: 'Internal Server Error' });
     }
   });
->>>>>>> 8889a47f297f77c06cc2fd70e97b4594cdd3f61f
 
 router.use(errorHandler)
 
