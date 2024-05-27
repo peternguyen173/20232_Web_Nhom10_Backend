@@ -1,6 +1,9 @@
 const express = require('express');
 const app = express();
 const http = require('http');
+const passport = require("passport");
+const cookieSession = require("cookie-session");
+const passportSetup = require("./passport");
 const server = http.createServer(app);
 const io = require('socket.io')(server, {
     cors: {
@@ -8,6 +11,22 @@ const io = require('socket.io')(server, {
       methods: ['GET', 'POST'],
     },
   });
+
+  require('dotenv').config();
+require('./db')
+/////////////////////////
+
+app.use(
+    cookieSession({
+        name: "session",
+        keys: ["cyberwolve"],
+        maxAge: 24*60*60*100,
+    })
+)
+
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 const bodyParser = require('body-parser');
 const cors = require('cors');
