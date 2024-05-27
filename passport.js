@@ -2,6 +2,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const passport = require('passport');
 const express = require('express');
 const session = require('express-session');
+const dotenv = require('dotenv');
 
 dotenv.config(); // Load environment variables from .env file
 
