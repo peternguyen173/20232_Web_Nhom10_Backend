@@ -1,9 +1,15 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const http = require('http'); // Import thêm module http
 const socketIO = require('socket.io');
 
+
+
+
 const router = express.Router();
-const io = socketIO();
+const app = express();
+const server = http.createServer(app); // Tạo server HTTP từ ứng dụng Express
+const io = socketIO(server); // Khởi tạo socket.io từ server HTTP
 
 const User = require('../Models/UserSchema')
 const Movie = require('../Models/MovieSchema')
@@ -13,11 +19,9 @@ const Promotion = require('../Models/PromotionSchema')
 const Rating = require('../Models/RatingSchema')
 const Notification = require('../Models/NotificationSchema'); // Model Notification
 
-
 const errorHandler = require('../Middlewares/errorMiddleware');
 const authTokenHandler = require('../Middlewares/checkAuthToken');
 const adminTokenHandler = require('../Middlewares/checkAdminToken');
-
 
 function createResponse(ok, message, data) {
     return {
@@ -32,7 +36,6 @@ router.get('/test', async (req, res) => {
         message: "Movie api is working"
     })
 })
-
 
 // admin access
 router.post('/createmovie', adminTokenHandler, async (req, res, next) => {
@@ -63,7 +66,6 @@ router.post('/createscreen', adminTokenHandler, async (req, res, next) => {
 
         await newScreen.save();
 
-
         res.status(201).json({
             ok: true,
             message: "Screen added successfully"
@@ -86,7 +88,6 @@ router.post('/updatescreen/:screenid', adminTokenHandler, async (req, res, next)
         });
 
         await newScreen.save();
-
 
         res.status(201).json({
             ok: true,
@@ -170,7 +171,6 @@ router.post('/addmoviescheduletoscreen', adminTokenHandler, async (req, res, nex
     }
 })
 
-
 // user access
 router.post('/bookticket', authTokenHandler, async (req, res, next) => {
     try {
@@ -187,7 +187,6 @@ router.post('/bookticket', authTokenHandler, async (req, res, next) => {
                 message: "Theatre not found"
             });
         }
-
 
 
         const movieSchedule = screen.movieSchedules.find(schedule => {
@@ -240,7 +239,6 @@ router.post('/bookticket', authTokenHandler, async (req, res, next) => {
         console.log('newBooking done');
 
 
-
         movieSchedule.notAvailableSeats.push(...seats);
         await screen.save();
         console.log('screen saved');
@@ -275,7 +273,6 @@ router.post('/bookticket', authTokenHandler, async (req, res, next) => {
     }
     
 })
-
 
 router.get('/movies', async (req, res, next) => {
     try {
@@ -446,7 +443,6 @@ router.get('/screensbymovieschedule/undefined/:date/:movieid', async (req, res, 
 });
 
 
-
 router.get('/schedulebymovie/:screenid/:date/:showtime/:movieid', async (req, res, next) => {
     const screenId = req.params.screenid;
     const date = req.params.date;
@@ -528,7 +524,6 @@ router.delete('/deleteschedule/:scheduleId', async (req, res) => {
         res.status(500).json({ ok: false, message: 'Server error' });
     }
 });
-
 
 
 router.delete('/deletescreen/:screenid', async (req, res) => {
@@ -638,7 +633,6 @@ router.delete('/deletepromotion/:promotionId', adminTokenHandler, async (req, re
         next(err); // Chuyển mọi lỗi đến middleware xử lý lỗi
     }
 });
-
 
 router.post('/rating', async (req, res) => {
     const { movieId, userId, rating } = req.body;
