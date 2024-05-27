@@ -6,8 +6,7 @@ const session = require('express-session');
 
 
 const app = express();
-// const GOOGLE_CLIENT_ID = '971724571785-2u32q3fcams2lf3khnlis442qhtsjak4.apps.googleusercontent.com';
-// const GOOGLE_CLIENT_SECRET = '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';
+
 // Thiết lập session
 app.use(session({
   secret: 'your-secret-key',
