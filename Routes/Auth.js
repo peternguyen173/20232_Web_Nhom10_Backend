@@ -7,7 +7,6 @@ const authTokenHandler = require('../Middlewares/checkAuthToken');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
-// const Knock = require('@knocklabs/client');
 const passport = require('passport');
 
 
