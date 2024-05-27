@@ -16,6 +16,8 @@ const io = require('socket.io')(server, {
 require('./db')
 /////////////////////////
 
+
+
 app.use(
     cookieSession({
         name: "session",
@@ -48,6 +50,8 @@ const adminRoutes = require('./Routes/Admin')
 const movieRoutes = require('./Routes/Movie')
 const imageuploadRoutes = require('./Routes/imageUploadRoutes');
 const notificationsRoutes = require('./Routes/Notification');
+const bannerRoutes = require('./Routes/Banner');
+
 
 require('dotenv').config();
 require('./db')
@@ -90,6 +94,8 @@ app.use('/admin', adminRoutes);
 app.use('/movie',  movieRoutes);
 app.use('/image', imageuploadRoutes);
 app.use('/notifications', notificationsRoutes);
+app.use('/banner', bannerRoutes);
+
 
 
 

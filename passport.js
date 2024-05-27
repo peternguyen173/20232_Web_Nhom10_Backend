@@ -3,6 +3,7 @@ const passport = require('passport');
 const express = require('express');
 const session = require('express-session');
 
+dotenv.config(); // Load environment variables from .env file
 
 
 const app = express();
@@ -20,8 +21,8 @@ app.use(passport.session());
 
 ////////////////
 passport.use(new GoogleStrategy({
-    clientID: GOOGLE_CLIENT_ID,
-    clientSecret: GOOGLE_CLIENT_SECRET,
+  clientID: process.env.GOOGLE_CLIENT_ID, // Use environment variables
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET, // Use environment variables
     callbackURL: "http://localhost:8000/auth/google/callback",
     scope: ["profile","email"],
   },
